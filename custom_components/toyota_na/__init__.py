@@ -163,6 +163,19 @@ async def async_setup(hass: HomeAssistant, _processed_config) -> bool:
 
     return True
 
+async def async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    # Apply verbose_logging flag to the client without full restart
+    if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
+        client = hass.data[DOMAIN][entry.entry_id].get("toyota_na_client")
+        if client:
+            client._verbose_logging = entry.options.get("verbose_logging", False)
+            _LOGGER.debug(
+                "Verbose logging %s for entry %s",
+                "enabled" if client._verbose_logging else "disabled",
+                entry.entry_id
+            )
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {})
 
@@ -172,6 +185,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             callback=lambda tokens: update_tokens(tokens, hass, entry),
         )
     )
+    # Apply verbose_logging flag from options
+    client._verbose_logging = entry.options.get("verbose_logging", False)
+    
     try:
         client.auth.set_tokens(entry.data["tokens"])
         await client.auth.check_tokens()
@@ -200,6 +216,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         "coordinator": coordinator,
         "ws_handler": ws_handler,
     }
+
+    # Register options update listener
+    entry.add_update_listener(async_options_updated)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
