@@ -70,6 +70,11 @@ class VehicleFeatures(Enum):
     RealTimeLocation = auto()
     ParkingLocation = auto()
 
+    # Vehicle health alerts
+    VehicleAlertExists = auto()
+    VehicleAlertCount = auto()
+    VehicleAlertActive = auto()
+
 
 @unique
 class RemoteRequestCommand(Enum):

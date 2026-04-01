@@ -13,6 +13,7 @@ from .patch_client import (
     api_request,
     _auth_headers,
     get_telemetry,
+    get_vehicle_health_report,
     get_vehicle_status_17cyplus,
     get_engine_status_17cyplus,
     send_refresh_request_17cyplus,
@@ -30,6 +31,7 @@ ToyotaOneClient.get_electric_status = get_electric_status
 ToyotaOneClient.api_request = api_request
 ToyotaOneClient._auth_headers = _auth_headers
 ToyotaOneClient.get_telemetry = get_telemetry
+ToyotaOneClient.get_vehicle_health_report = get_vehicle_health_report
 ToyotaOneClient.get_vehicle_status_17cyplus = get_vehicle_status_17cyplus
 ToyotaOneClient.get_engine_status_17cyplus = get_engine_status_17cyplus
 ToyotaOneClient.send_refresh_request_17cyplus = send_refresh_request_17cyplus

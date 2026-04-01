@@ -152,6 +152,15 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             _LOGGER.debug("Error parsing electric status: %s", e)
             pass
 
+        try:
+            # vehicle health report — alerts, maintenance
+            health_report = await self._client.get_vehicle_health_report(self._vin)
+            if health_report:
+                self._parse_health_report(health_report)
+        except Exception as e:
+            _LOGGER.debug("Error fetching health report: %s", e)
+            pass
+
     async def poll_vehicle_refresh(self) -> None:
         """Instructs Toyota's systems to ping the vehicle to upload a fresh status."""
         # GraphQL refresh flow: pre-wake -> confirm subscription -> refresh
@@ -225,6 +234,29 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         self._features[VehicleFeatures.ChargeType] = ToyotaNumeric(chargeInfo.get("chargeType"), "")
         self._features[VehicleFeatures.ConnectorStatus] = ToyotaNumeric(chargeInfo.get("connectorStatus"), "")
         self._features[VehicleFeatures.ChargingStatus] = ToyotaOpening(chargeInfo.get("connectorStatus") != 5)
+
+    #
+    # vehicle_health_report
+    #
+
+    def _parse_health_report(self, health_report: dict) -> None:
+        """Parse vehicleAlertList from the health report endpoint."""
+        try:
+            payload = health_report.get("payload", {})
+            alert_list = payload.get("vehicleAlertList", [])
+            alerts_exist = len(alert_list) > 0
+
+            self._features[VehicleFeatures.VehicleAlertExists] = ToyotaOpening(closed=not alerts_exist)
+            self._features[VehicleFeatures.VehicleAlertCount] = ToyotaNumeric(len(alert_list), "")
+
+            if alerts_exist:
+                first = alert_list[0]
+                alert_name = first.get("wngname") or first.get("wngshortdesc") or "Unknown Alert"
+            else:
+                alert_name = None
+            self._features[VehicleFeatures.VehicleAlertActive] = ToyotaNumeric(alert_name, "")
+        except Exception as e:
+            _LOGGER.debug("Error parsing health report: %s", e)
 
     #
     # vehicle_health_status

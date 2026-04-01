@@ -36,6 +36,14 @@ GRAPHQL_REFRESH_STATUS = """mutation RefreshVehicleStatus($vin: String!) {
 }"""
 
 
+async def get_vehicle_health_report(self, vin):
+    """Vehicle health report — alerts, maintenance, recalls."""
+    try:
+        return await self.api_get("v1/vehiclehealth/report", {"VIN": vin})
+    except Exception as e:
+        _LOGGER.debug("vehiclehealth/report failed: %s", e)
+    return None
+
 async def get_telemetry(self, vin, region="US", generation="17CYPLUS"):
     try:
         return await self.api_get(

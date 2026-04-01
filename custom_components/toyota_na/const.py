@@ -175,6 +175,14 @@ BINARY_SENSORS = [
         "subscription": True,
         "electric": True,
     },
+    {
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "feature": VehicleFeatures.VehicleAlertExists,
+        "icon": "mdi:alert-circle",
+        "name": "Vehicle Alert",
+        "subscription": False,
+        "electric": False,
+    },
 ]
 
 SENSORS = [
@@ -375,5 +383,23 @@ SENSORS = [
         "unit": "",
         "subscription": True,
         "electric": True,
+    },
+    {
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:counter",
+        "feature": VehicleFeatures.VehicleAlertCount,
+        "name": "Vehicle Alert Count",
+        "unit": "",
+        "subscription": False,
+        "electric": False,
+    },
+    {
+        "state_class": None,
+        "icon": "mdi:alert-circle-outline",
+        "feature": VehicleFeatures.VehicleAlertActive,
+        "name": "Vehicle Alert",
+        "unit": "",
+        "subscription": False,
+        "electric": False,
     },
 ]
