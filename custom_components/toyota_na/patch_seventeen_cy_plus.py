@@ -248,8 +248,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
     def _parse_health_report(self, health_report: dict) -> None:
         """Parse vehicleAlertList from the health report endpoint."""
         try:
-            payload = health_report.get("payload", {})
-            alert_list = payload.get("vehicleAlertList", [])
+            alert_list = health_report.get("vehicleAlertList", [])
             alerts_exist = len(alert_list) > 0
 
             self._features[VehicleFeatures.VehicleAlertExists] = ToyotaOpening(closed=not alerts_exist)
