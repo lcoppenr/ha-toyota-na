@@ -46,11 +46,13 @@ async def get_vehicle_health_report(self, vin):
 
 async def get_telemetry(self, vin, region="US", generation="17CYPLUS"):
     try:
-        return await self.api_get(
+        result = await self.api_get(
             "v2/telemetry", {"VIN": vin, "GENERATION": generation, "X-BRAND": "T", "x-region": region}
         )
+        _LOGGER.warning("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
+        return result
     except Exception as e:
-        _LOGGER.debug("v2/telemetry failed: %s", e)
+        _LOGGER.warning("Toyota NA v2/telemetry FAILED: %s", e)
         return None
 
 async def _auth_headers(self):
