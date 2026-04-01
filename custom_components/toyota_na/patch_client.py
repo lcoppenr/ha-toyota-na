@@ -46,12 +46,17 @@ async def get_vehicle_health_report(self, vin):
 
 async def get_telemetry(self, vin, region="US", generation="17CYPLUS"):
     try:
-        # api_get passes params as headers (upstream library behavior); v2/telemetry
-        # requires VIN and GENERATION as URL query params — use api_request directly.
-        result = await self.api_request(
-            "GET", "v2/telemetry", params={"VIN": vin, "GENERATION": generation}
-        )
-        _LOGGER.debug("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
+        # api_get passes header_params to upstream api_request as headers. But our patched
+        # api_request's 3rd positional arg is `params` (query string), so they silently
+        # become query params instead of headers. v2/telemetry requires VIN/GENERATION as
+        # HTTP headers. Make the request directly to guarantee correct behavior.
+        headers = await self._auth_headers()
+        headers.update({"VIN": vin, "GENERATION": generation, "X-BRAND": "T"})
+        full_url = urljoin(API_GATEWAY, "v2/telemetry")
+        async with aiohttp.ClientSession() as session:
+            async with session.request("GET", full_url, headers=headers) as resp:
+                result = await resp.json()
+        _LOGGER.debug("Toyota NA get_telemetry returned: %s", type(result).__name__)
         return result
     except Exception as e:
         _LOGGER.debug("Toyota NA v2/telemetry FAILED: %s", e)
