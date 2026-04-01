@@ -91,3 +91,36 @@ class ToyotaNAConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, data):
         return await self.async_step_user()
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        """Return the options flow."""
+        return OptionsFlowHandler(config_entry)
+
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle an options flow."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        "verbose_logging",
+                        default=self.config_entry.options.get("verbose_logging", False),
+                    ): bool,
+                }
+            ),
+            description_placeholders={
+                "verbose_logging_help": "Enable verbose diagnostic logging. When enabled, certain diagnostic log lines will appear at WARNING level in the Home Assistant log viewer. When disabled, these same lines drop to DEBUG level."
+            },
+        )
