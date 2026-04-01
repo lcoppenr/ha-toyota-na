@@ -46,21 +46,15 @@ async def get_vehicle_health_report(self, vin):
 
 async def get_telemetry(self, vin, region="US", generation="17CYPLUS"):
     try:
-        result = await self.api_get(
-            "v2/telemetry", {"VIN": vin, "GENERATION": generation, "X-BRAND": "T", "x-region": region}
+        # api_get passes params as headers (upstream library behavior); v2/telemetry
+        # requires VIN and GENERATION as URL query params — use api_request directly.
+        result = await self.api_request(
+            "GET", "v2/telemetry", params={"VIN": vin, "GENERATION": generation}
         )
-        # Use verbose_logging flag to control log level
-        if getattr(self, '_verbose_logging', False):
-            _LOGGER.warning("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
-        else:
-            _LOGGER.debug("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
+        _LOGGER.debug("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
         return result
     except Exception as e:
-        # Use verbose_logging flag for error logging too
-        if getattr(self, '_verbose_logging', False):
-            _LOGGER.warning("Toyota NA v2/telemetry FAILED: %s", e)
-        else:
-            _LOGGER.debug("Toyota NA v2/telemetry FAILED: %s", e)
+        _LOGGER.debug("Toyota NA v2/telemetry FAILED: %s", e)
         return None
 
 async def _auth_headers(self):
