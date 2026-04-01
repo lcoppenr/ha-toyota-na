@@ -3,7 +3,7 @@ from typing import Any, Union, cast
 from toyota_na.vehicle.base_vehicle import ToyotaVehicle, VehicleFeatures
 from toyota_na.vehicle.entity_types.ToyotaNumeric import ToyotaNumeric
 
-from homeassistant.components.sensor import SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfLength
 from homeassistant.core import HomeAssistant
@@ -44,6 +44,7 @@ async def async_setup_entry(
                         cast(str, entity_config["icon"]),
                         cast(str, entity_config["unit"]),
                         cast(SensorStateClass, entity_config["state_class"]),
+                        entity_config.get("device_class"),
                         coordinator,
                         entity_config["name"],
                         vehicle.vin,
@@ -63,11 +64,13 @@ class ToyotaNumericSensor(ToyotaNABaseEntity):
         icon: str,
         unit_of_measurement: str,
         state_class: Union[SensorStateClass, str],
+        device_class: Union[SensorDeviceClass, str, None],
         *args: Any,
     ):
         super().__init__(*args)
         self._icon = icon
         self._state_class = state_class
+        self._device_class = device_class
         self._unit_of_measurement = unit_of_measurement
         self._vehicle_feature = vehicle_feature
 
@@ -76,17 +79,21 @@ class ToyotaNumericSensor(ToyotaNABaseEntity):
         return self._icon
 
     @property
-    def state(self):
+    def native_value(self):
         feat = cast(ToyotaNumeric, self.feature(self._vehicle_feature))
         if feat:
             return feat.value
+
+    @property
+    def device_class(self):
+        return self._device_class
 
     @property
     def state_class(self):
         return self._state_class
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
 
         # We need to poll the unit of measure from the service itself to ensure we're passing
         # the correct unit of measure to the sensor.
