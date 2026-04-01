@@ -49,10 +49,18 @@ async def get_telemetry(self, vin, region="US", generation="17CYPLUS"):
         result = await self.api_get(
             "v2/telemetry", {"VIN": vin, "GENERATION": generation, "X-BRAND": "T", "x-region": region}
         )
-        _LOGGER.warning("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
+        # Use verbose_logging flag to control log level
+        if getattr(self, '_verbose_logging', False):
+            _LOGGER.warning("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
+        else:
+            _LOGGER.debug("Toyota NA get_telemetry returned: %s keys=%s", type(result).__name__, list(result.keys()) if isinstance(result, dict) else result)
         return result
     except Exception as e:
-        _LOGGER.warning("Toyota NA v2/telemetry FAILED: %s", e)
+        # Use verbose_logging flag for error logging too
+        if getattr(self, '_verbose_logging', False):
+            _LOGGER.warning("Toyota NA v2/telemetry FAILED: %s", e)
+        else:
+            _LOGGER.debug("Toyota NA v2/telemetry FAILED: %s", e)
         return None
 
 async def _auth_headers(self):
@@ -198,69 +206,55 @@ async def graphql_request(self, operation_name, query, variables):
         "X-APPVERSION": "3.1.0",
         "X-OSNAME": "Android",
         "X-OSVERSION": "14",
-        "X-LOCALE": "en-US",
         "User-Agent": USER_AGENT,
     }
-    payload = json.dumps({
-        "operationName": operation_name,
-        "query": query,
-        "variables": variables,
-    })
-    async with aiohttp.ClientSession() as session:
-        async with session.post(GRAPHQL_ENDPOINT, headers=headers, data=payload) as resp:
-            body = await resp.text()
-            if resp.status >= 400:
-                _LOGGER.debug("GraphQL %s error: HTTP %d: %s", operation_name, resp.status, body[:500])
-                return None
-            result = json.loads(body)
-            if result.get("errors"):
-                err = result["errors"][0]
-                _LOGGER.debug("GraphQL %s error: %s: %s", operation_name, err.get("errorType"), err.get("message"))
-                return None
-            return result.get("data")
 
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            GRAPHQL_ENDPOINT,
+            headers=headers,
+            json={
+                "operationName": operation_name,
+                "query": query,
+                "variables": variables,
+            },
+        ) as resp:
+            return await resp.json()
 
 async def graphql_pre_wake(self, guid):
-    """Send pre-wake command to wake the vehicle's telematics unit."""
-    return await self.graphql_request("SendPreWakeCommand", GRAPHQL_PRE_WAKE, {"guid": guid})
-
+    """Send pre-wake command via GraphQL."""
+    return await self.graphql_request(
+        "SendPreWakeCommand",
+        GRAPHQL_PRE_WAKE,
+        {"guid": guid}
+    )
 
 async def graphql_confirm_subscription(self, vin):
-    """Confirm subscription is active for this VIN."""
-    return await self.graphql_request("ConfirmSubscriptionStatus", GRAPHQL_CONFIRM_SUBSCRIPTION, {"vin": vin})
-
+    """Confirm subscription via GraphQL."""
+    return await self.graphql_request(
+        "ConfirmSubscriptionStatus",
+        GRAPHQL_CONFIRM_SUBSCRIPTION,
+        {"vin": vin}
+    )
 
 async def graphql_refresh_status(self, vin):
-    """Request vehicle to upload fresh status via GraphQL."""
-    return await self.graphql_request("RefreshVehicleStatus", GRAPHQL_REFRESH_STATUS, {"vin": vin})
+    """Request refresh status via GraphQL."""
+    return await self.graphql_request(
+        "RefreshVehicleStatus",
+        GRAPHQL_REFRESH_STATUS,
+        {"vin": vin}
+    )
 
-
-async def api_request(self, method, endpoint, header_params=None, **kwargs):
+async def api_request(self, method, url, params=None, json_data=None):
     headers = await self._auth_headers()
-    if header_params:
-        headers.update(header_params)
-
-    if endpoint.startswith("/"):
-        endpoint = endpoint[1:]
-
-    url = urljoin(API_GATEWAY, endpoint)
-
+    full_url = urljoin(API_GATEWAY, url)
     async with aiohttp.ClientSession() as session:
         async with session.request(
-                method, url, headers=headers, **kwargs
+            method,
+            full_url,
+            params=params,
+            json=json_data,
+            headers=headers,
         ) as resp:
-            if resp.status >= 400:
-                body = await resp.text()
-                _LOGGER.debug(
-                    "Toyota API error: %s %s -> %d %s | Response: %s",
-                    method, url, resp.status, resp.reason, body[:500]
-                )
-            resp.raise_for_status()
-            try:
-                resp_json = await resp.json()
-                if "payload" in resp_json:
-                    return resp_json["payload"]
-                return resp_json
-            except:
-                _LOGGER.error("Error parsing response")
-                raise
+            result = await resp.json()
+            return result
