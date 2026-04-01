@@ -122,6 +122,10 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         self._features[VehicleFeatures.SpareTirePressure] = ToyotaNumeric(None, "psi")
         self._features[VehicleFeatures.LastTirePressureTimeStamp] = ToyotaNumeric(None, "")
         self._features[VehicleFeatures.Speed] = ToyotaNumeric(None, "km/h")
+        # Pre-initialize odometer and distance-to-empty so sensors always register
+        # even if telemetry returns null on first coordinator run
+        self._features[VehicleFeatures.Odometer] = ToyotaNumeric(None, "")
+        self._features[VehicleFeatures.DistanceToEmpty] = ToyotaNumeric(None, "")
 
     _last_graphql_status = None  # persist last successful GraphQL status
 
