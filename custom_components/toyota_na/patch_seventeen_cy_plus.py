@@ -95,6 +95,12 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             ApiVehicleGeneration.CY17PLUS,
         )
 
+        # Pre-initialize health alert features so sensors are always registered
+        # even if the health report fetch hasn't run yet or fails
+        self._features[VehicleFeatures.VehicleAlertExists] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.VehicleAlertCount] = ToyotaNumeric(0, "")
+        self._features[VehicleFeatures.VehicleAlertActive] = ToyotaNumeric(None, "")
+
     _last_graphql_status = None  # persist last successful GraphQL status
 
     async def update(self):
