@@ -7,7 +7,12 @@ from toyota_na.vehicle.vehicle_generations.seventeen_cy import SeventeenCYToyota
 from toyota_na.vehicle.vehicle_generations.seventeen_cy_plus import SeventeenCYPlusToyotaVehicle
 
 async def get_vehicles(client: ToyotaOneClient) -> list[ToyotaVehicle]:
-    api_vehicles = await client.get_user_vehicle_list()
+    api_response = await client.get_user_vehicle_list()
+    # The patched api_request returns the full response dict; extract payload list
+    if isinstance(api_response, dict):
+        api_vehicles = api_response.get("payload", [])
+    else:
+        api_vehicles = api_response or []
     supportedGenerations = dict((item.value, item) for item in ApiVehicleGeneration)
     vehicles = []
 
