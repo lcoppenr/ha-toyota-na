@@ -156,6 +156,9 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             # telemetry
             telemetry = await self._client.get_telemetry(self._vin, self._region)
             if telemetry:
+                # patched api_request returns full response dict; extract payload
+                if isinstance(telemetry, dict) and "payload" in telemetry:
+                    telemetry = telemetry["payload"]
                 self._parse_telemetry(telemetry)
         except Exception as e:
             _LOGGER.debug("Error fetching telemetry: %s", e)
