@@ -101,6 +101,28 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         self._features[VehicleFeatures.VehicleAlertCount] = ToyotaNumeric(0, "")
         self._features[VehicleFeatures.VehicleAlertActive] = ToyotaNumeric(None, "")
 
+        # Pre-initialize door/window/opening features so sensors register at HA setup
+        self._features[VehicleFeatures.FrontDriverDoor] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.FrontPassengerDoor] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.RearDriverDoor] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.RearPassengerDoor] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.Hood] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.Trunk] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.Moonroof] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.FrontDriverWindow] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.FrontPassengerWindow] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.RearDriverWindow] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.RearPassengerWindow] = ToyotaOpening(closed=True)
+        self._features[VehicleFeatures.RemoteStartStatus] = ToyotaOpening(closed=False)
+        # Pre-initialize tire pressure and speed features
+        self._features[VehicleFeatures.FrontDriverTire] = ToyotaNumeric(None, "psi")
+        self._features[VehicleFeatures.FrontPassengerTire] = ToyotaNumeric(None, "psi")
+        self._features[VehicleFeatures.RearDriverTire] = ToyotaNumeric(None, "psi")
+        self._features[VehicleFeatures.RearPassengerTire] = ToyotaNumeric(None, "psi")
+        self._features[VehicleFeatures.SpareTirePressure] = ToyotaNumeric(None, "psi")
+        self._features[VehicleFeatures.LastTirePressureTimeStamp] = ToyotaNumeric(None, "")
+        self._features[VehicleFeatures.Speed] = ToyotaNumeric(None, "km/h")
+
     _last_graphql_status = None  # persist last successful GraphQL status
 
     async def update(self):
