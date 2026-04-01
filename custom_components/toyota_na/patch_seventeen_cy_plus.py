@@ -472,6 +472,11 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
     def _parse_telemetry(self, telemetry: dict) -> None:
         if not telemetry:
             return
+
+    
+    _LOGGER.warning("Toyota NA _parse_telemetry called with %d keys: %s", len(telemetry), list(telemetry.keys()))
+    _LOGGER.warning("Toyota NA _parse_telemetry called with %d keys: %s", len(telemetry), list(telemetry.keys()))
+            return
             
         for key, value in telemetry.items():
             if value is None:
@@ -512,6 +517,8 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                     self._features[self._vehicle_telemetry_map[key]] = ToyotaNumeric(
                         value["value"], value.get("unit", "")
                     )
+                    if "Tire" in key or "tire" in key:
+                        _LOGGER.warning("Toyota NA tire key %s set to %s %s", key, value["value"], value.get("unit", ""))
                 else:
                     self._features[self._vehicle_telemetry_map[key]] = ToyotaNumeric(
                         value, ""
