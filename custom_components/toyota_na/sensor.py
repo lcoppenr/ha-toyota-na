@@ -3,7 +3,7 @@ from typing import Any, Union, cast
 from toyota_na.vehicle.base_vehicle import ToyotaVehicle, VehicleFeatures
 from toyota_na.vehicle.entity_types.ToyotaNumeric import ToyotaNumeric
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfLength
 from homeassistant.core import HomeAssistant
@@ -54,7 +54,7 @@ async def async_setup_entry(
     async_add_devices(sensors, True)
 
 
-class ToyotaNumericSensor(ToyotaNABaseEntity):
+class ToyotaNumericSensor(ToyotaNABaseEntity, SensorEntity):
     _icon: str
     _vehicle_feature: VehicleFeatures
 
