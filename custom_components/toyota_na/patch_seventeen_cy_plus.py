@@ -467,17 +467,17 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
 
     #
     # get_telemetry
+
+    #
+    # get_telemetry
     #
 
     def _parse_telemetry(self, telemetry: dict) -> None:
         if not telemetry:
             return
 
-    
-    _LOGGER.warning("Toyota NA _parse_telemetry called with %d keys: %s", len(telemetry), list(telemetry.keys()))
-    _LOGGER.warning("Toyota NA _parse_telemetry called with %d keys: %s", len(telemetry), list(telemetry.keys()))
-            return
-            
+        _LOGGER.warning("Toyota NA _parse_telemetry called with %d keys: %s", len(telemetry), list(telemetry.keys()))
+
         for key, value in telemetry.items():
             if value is None:
                 continue
@@ -491,7 +491,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             if key == "tirePressureTimestamp":
                 self._features[VehicleFeatures.LastTirePressureTimeStamp] = ToyotaNumeric(datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp(), "")
                 continue
-                
+
             # fuel level is a primitive
             if key == "fuelLevel":
                 self._features[VehicleFeatures.FuelLevel] = ToyotaNumeric(value, "%")
@@ -510,8 +510,14 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                 self._features[
                     self._vehicle_telemetry_map.get(key, key)
                 ] = ToyotaOpening(closed=(value == 2))
-                continue
 
+            elif self._vehicle_telemetry_map.get(key) is not None:
+                try:
+                    self._features[self._vehicle_telemetry_map[key]] = ToyotaNumeric(
+                        value, self._vehicle_telemetry_units.get(key, "")
+                    )
+                except (ValueError, TypeError):
+                    _LOGGER.debug("Could not parse telemetry value %s = %s", key, value)
             if self._vehicle_telemetry_map.get(key) is not None:
                 if isinstance(value, dict) and "value" in value:
                     self._features[self._vehicle_telemetry_map[key]] = ToyotaNumeric(
@@ -524,3 +530,4 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                         value, ""
                     )
                 continue
+
