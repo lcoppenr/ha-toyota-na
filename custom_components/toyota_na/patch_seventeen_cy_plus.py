@@ -155,13 +155,15 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         try:
             # telemetry
             telemetry = await self._client.get_telemetry(self._vin, self._region)
+            _LOGGER.warning("Toyota NA raw telemetry type=%s keys=%s", type(telemetry).__name__, list(telemetry.keys()) if isinstance(telemetry, dict) else repr(telemetry)[:200])
             if telemetry:
                 # patched api_request returns full response dict; extract payload
                 if isinstance(telemetry, dict) and "payload" in telemetry:
                     telemetry = telemetry["payload"]
+                _LOGGER.warning("Toyota NA unwrapped telemetry type=%s keys=%s", type(telemetry).__name__, list(telemetry.keys()) if isinstance(telemetry, dict) else repr(telemetry)[:200])
                 self._parse_telemetry(telemetry)
         except Exception as e:
-            _LOGGER.debug("Error fetching telemetry: %s", e)
+            _LOGGER.warning("Toyota NA telemetry error: %s", e)
             pass
 
         try:
