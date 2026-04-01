@@ -101,6 +101,12 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         self._features[VehicleFeatures.VehicleAlertCount] = ToyotaNumeric(0, "")
         self._features[VehicleFeatures.VehicleAlertActive] = ToyotaNumeric(None, "")
 
+        # Units for telemetry fields that return primitive values (not {"value": x, "unit": y})
+        # Fields returning dicts get their unit from the response itself
+        self._vehicle_telemetry_units = {
+            "fuelLevel": "%",
+        }
+
         # Pre-initialize door/window/opening features so sensors register at HA setup
         self._features[VehicleFeatures.FrontDriverDoor] = ToyotaOpening(closed=True)
         self._features[VehicleFeatures.FrontPassengerDoor] = ToyotaOpening(closed=True)
