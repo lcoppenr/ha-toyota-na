@@ -2,7 +2,7 @@ from toyota_na.vehicle.base_vehicle import VehicleFeatures
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import PERCENTAGE, UnitOfPressure
+from homeassistant.const import PERCENTAGE, UnitOfPressure, UnitOfSpeed
 
 from toyota_na.vehicle.base_vehicle import RemoteRequestCommand
 
@@ -334,10 +334,11 @@ SENSORS = [
     },
     {
         "state_class": SensorStateClass.MEASUREMENT,
-        "icon": "mdi:gauge",
+        "device_class": SensorDeviceClass.SPEED,
+        "icon": "mdi:speedometer",
         "feature": VehicleFeatures.Speed,
         "name": "Speed",
-        "unit": "km/h",
+        "unit": UnitOfSpeed.KILOMETERS_PER_HOUR,
         "subscription": False,
         "electric": False,
     },
