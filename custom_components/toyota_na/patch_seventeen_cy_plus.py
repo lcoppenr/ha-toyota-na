@@ -155,7 +155,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         try:
             # telemetry
             telemetry = await self._client.get_telemetry(self._vin, self._region)
-            _LOGGER.warning("Toyota NA raw telemetry type=%s keys=%s", type(telemetry).__name__, list(telemetry.keys()) if isinstance(telemetry, dict) else repr(telemetry)[:200])
+            _LOGGER.warning("Toyota NA raw telemetry type=%s content=%s", type(telemetry).__name__, repr(telemetry)[:500])
             if telemetry:
                 # patched api_request returns full response dict; extract payload
                 if isinstance(telemetry, dict) and "payload" in telemetry:
