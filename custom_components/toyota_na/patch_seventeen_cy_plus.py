@@ -358,20 +358,46 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                     if first_val not in ("closed", "open", "opened", "locked", "unlocked"):
                         _LOGGER.warning("Toyota NA vehicle_status: skipping key=%s, unexpected first_val=%s", key, first_val)
                         continue
-                    # CLOSED is always the first value entry. So we can use it to determine which subtype to instantiate
-                    if len(values) == 1:
+
+                    if first_val in ("locked", "unlocked"):
+                        # API returns lock state as the sole value (no separate open/closed).
+                        # Create ToyotaLockableOpening; assume closed since no position data.
+                        is_locked = (first_val == "locked")
+                        if len(values) >= 2:
+                            # If a second value exists, treat it as open/closed position
+                            pos_val = values[1].get("value", "").lower()
+                            is_closed = (pos_val == "closed")
+                        else:
+                            is_closed = True  # no position data → assume closed
+                        self._features[
+                            self._vehicle_status_category_map[key]
+                        ] = ToyotaLockableOpening(
+                            closed=is_closed,
+                            locked=is_locked,
+                        )
+                        _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, is_closed, is_locked)
+                    elif len(values) >= 2:
+                        # Standard layout: values[0]=open/closed, values[1]=locked/unlocked
+                        second_val = values[1].get("value", "").lower()
+                        if second_val in ("locked", "unlocked"):
+                            self._features[
+                                self._vehicle_status_category_map[key]
+                            ] = ToyotaLockableOpening(
+                                closed=self._isClosed(section),
+                                locked=self._isLocked(section),
+                            )
+                            _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, self._isClosed(section), self._isLocked(section))
+                        else:
+                            self._features[
+                                self._vehicle_status_category_map[key]
+                            ] = ToyotaOpening(self._isClosed(section))
+                            _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s) [2 vals, no lock]", key, self._isClosed(section))
+                    else:
+                        # Single value, open/closed only
                         self._features[
                             self._vehicle_status_category_map[key]
                         ] = ToyotaOpening(self._isClosed(section))
                         _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s)", key, self._isClosed(section))
-                    elif len(values) >= 2:
-                        self._features[
-                            self._vehicle_status_category_map[key]
-                        ] = ToyotaLockableOpening(
-                            closed=self._isClosed(section),
-                            locked=self._isLocked(section),
-                        )
-                        _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, self._isClosed(section), self._isLocked(section))
 
     #
     # GraphQL vehicle status parser
