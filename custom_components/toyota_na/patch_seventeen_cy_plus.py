@@ -327,7 +327,10 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             )
 
         if "vehicleStatus" not in vehicle_status or vehicle_status["vehicleStatus"] is None:
+            _LOGGER.warning("Toyota NA _parse_vehicle_status: no vehicleStatus key or None")
             return
+
+        _LOGGER.warning("Toyota NA _parse_vehicle_status: %d categories", len(vehicle_status["vehicleStatus"]))
 
         for category in vehicle_status["vehicleStatus"]:
             if not category or "sections" not in category:
@@ -340,20 +343,27 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                 section_type = section.get("section")
 
                 key = f"{category_type} {section_type}"
+                values = section.get("values", [])
+
+                _LOGGER.warning(
+                    "Toyota NA vehicle_status section key=%s values=%s mapped=%s",
+                    key, values, self._vehicle_status_category_map.get(key),
+                )
 
                 # We don't support all features necessarily. So avoid throwing on a key error.
                 if self._vehicle_status_category_map.get(key) is not None:
-                    values = section.get("values", [])
                     if not values:
                         continue
                     first_val = values[0].get("value", "").lower()
                     if first_val not in ("closed", "open", "opened", "locked", "unlocked"):
+                        _LOGGER.warning("Toyota NA vehicle_status: skipping key=%s, unexpected first_val=%s", key, first_val)
                         continue
                     # CLOSED is always the first value entry. So we can use it to determine which subtype to instantiate
                     if len(values) == 1:
                         self._features[
                             self._vehicle_status_category_map[key]
                         ] = ToyotaOpening(self._isClosed(section))
+                        _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s)", key, self._isClosed(section))
                     elif len(values) >= 2:
                         self._features[
                             self._vehicle_status_category_map[key]
@@ -361,6 +371,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                             closed=self._isClosed(section),
                             locked=self._isLocked(section),
                         )
+                        _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, self._isClosed(section), self._isLocked(section))
 
     #
     # GraphQL vehicle status parser
@@ -552,4 +563,3 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                         value, ""
                     )
                 continue
-

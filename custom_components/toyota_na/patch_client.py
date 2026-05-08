@@ -77,11 +77,22 @@ async def _auth_headers(self):
     }
 
 async def get_vehicle_status_17cyplus(self, vin):
-    """Vehicle status (doors, locks, windows, hood, hatch) for 21MM/17CYPLUS."""
+    """Vehicle status (doors, locks, windows, hood, hatch) for 21MM/17CYPLUS.
+
+    Uses direct aiohttp to guarantee VIN is sent as an HTTP header (not query param).
+    The upstream api_get → patched api_request maps header_params to `params` (query string),
+    which causes the Toyota API to return incomplete data (missing lock values).
+    """
     try:
-        res = await self.api_get("v1/global/remote/status", {
-            "VIN": vin, "vin": vin,
-        })
+        headers = await self._auth_headers()
+        headers.update({"VIN": vin, "vin": vin})
+        full_url = urljoin(API_GATEWAY, "v1/global/remote/status")
+        async with aiohttp.ClientSession() as session:
+            async with session.request("GET", full_url, headers=headers) as resp:
+                res = await resp.json()
+        _LOGGER.debug("Toyota NA get_vehicle_status_17cyplus raw keys: %s", list(res.keys()) if isinstance(res, dict) else type(res).__name__)
+        if isinstance(res, dict) and "payload" in res:
+            res = res["payload"]
         if res and res.get("vehicleStatus"):
             return res
     except Exception as e:
@@ -115,11 +126,19 @@ async def send_refresh_request_17cyplus(self, vin):
     return None
 
 async def remote_request_17cyplus(self, vin, command):
-    """Remote command (lock, unlock, engine start, etc.) via v1/global/remote."""
-    return await self.api_post(
-        "v1/global/remote/command", {"command": command},
-        {"VIN": vin, "X-BRAND": "T", "x-region": "US"}
-    )
+    """Remote command (lock, unlock, engine start, etc.) via v1/global/remote.
+
+    Uses direct aiohttp to guarantee VIN is sent as an HTTP header.
+    Same fix as get_vehicle_status_17cyplus and get_telemetry.
+    """
+    headers = await self._auth_headers()
+    headers.update({"VIN": vin, "X-BRAND": "T", "x-region": "US"})
+    full_url = urljoin(API_GATEWAY, "v1/global/remote/command")
+    async with aiohttp.ClientSession() as session:
+        async with session.request("POST", full_url, headers=headers, json={"command": command}) as resp:
+            result = await resp.json()
+    _LOGGER.debug("Toyota NA remote_request_17cyplus command=%s result=%s", command, result)
+    return result
 
 async def get_vehicle_status_17cy(self, vin):
     """Legacy vehicle status."""
