@@ -98,7 +98,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["binary_sensor", "button", "device_tracker", "lock", "sensor"]
 
 async def async_setup(hass: HomeAssistant, _processed_config) -> bool:
-    @service.verify_domain_control(hass, DOMAIN)
+    @service.verify_domain_control(DOMAIN)
     async def async_service_handle(service_call: ServiceCall) -> None:
         """Handle dispatched services."""
 
