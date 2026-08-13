@@ -1,0 +1,36 @@
+name: Fork release
+
+# Fork-only. Upstream ships .github/workflows/release.yml, which fires on
+# `release: published` and only uploads the asset to a release you created by
+# hand. This one creates the release itself on a v* tag push, so shipping a
+# HACS update is `git push --tags` and nothing else.
+#
+# Deliberately a separate filename so it never conflicts when syncing upstream.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build zip and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # hacs.json sets "zip_release": true / "filename": "ha_toyota_na.zip",
+      # so HACS requires the integration files at the ROOT of the zip.
+      - name: Build HACS zip
+        run: |
+          cd custom_components/toyota_na
+          zip -r ha_toyota_na.zip * -x '*__pycache__*' '*.pyc'
+
+      - name: Publish release with asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: custom_components/toyota_na/ha_toyota_na.zip
+          generate_release_notes: true
