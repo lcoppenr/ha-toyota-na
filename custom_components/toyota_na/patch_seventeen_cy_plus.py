@@ -21,6 +21,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
     _has_remote_subscription = False
     _has_electric = False
     _last_vehicle_status = None  # persist last successful status across polls
+    _last_vehicle_status_timestamp = None  # parsed from vehicle_status "occurrenceDate"
 
     _command_map = {
         RemoteRequestCommand.DoorLock: "door-lock",
@@ -161,12 +162,12 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         try:
             # telemetry
             telemetry = await self._client.get_telemetry(self._vin, self._region)
-            _LOGGER.warning("Toyota NA raw telemetry type=%s content=%s", type(telemetry).__name__, repr(telemetry)[:500])
+            _LOGGER.debug("Toyota NA raw telemetry type=%s content=%s", type(telemetry).__name__, repr(telemetry)[:500])
             if telemetry:
                 # patched api_request returns full response dict; extract payload
                 if isinstance(telemetry, dict) and "payload" in telemetry:
                     telemetry = telemetry["payload"]
-                _LOGGER.warning("Toyota NA unwrapped telemetry type=%s keys=%s", type(telemetry).__name__, list(telemetry.keys()) if isinstance(telemetry, dict) else repr(telemetry)[:200])
+                _LOGGER.debug("Toyota NA unwrapped telemetry type=%s keys=%s", type(telemetry).__name__, list(telemetry.keys()) if isinstance(telemetry, dict) else repr(telemetry)[:200])
                 self._parse_telemetry(telemetry)
         except Exception as e:
             _LOGGER.warning("Toyota NA telemetry error: %s", e)
@@ -316,6 +317,19 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             return False
         return values[1].get("value", "").lower() == "locked"
 
+    @staticmethod
+    def _parse_timestamp(value) -> "datetime.datetime | None":
+        """Parse an ISO-8601 timestamp into a timezone-aware datetime, or None."""
+        if not value:
+            return None
+        try:
+            parsed = datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+        return parsed
+
     def _parse_vehicle_status(self, vehicle_status: dict) -> None:
         if not vehicle_status:
             return
@@ -327,10 +341,13 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
             )
 
         if "vehicleStatus" not in vehicle_status or vehicle_status["vehicleStatus"] is None:
-            _LOGGER.warning("Toyota NA _parse_vehicle_status: no vehicleStatus key or None")
+            _LOGGER.debug("Toyota NA _parse_vehicle_status: no vehicleStatus key or None")
             return
 
-        _LOGGER.warning("Toyota NA _parse_vehicle_status: %d categories", len(vehicle_status["vehicleStatus"]))
+        self._last_vehicle_status_timestamp = self._parse_timestamp(vehicle_status.get("occurrenceDate"))
+        _LOGGER.debug("Toyota NA vehicle_status occurrenceDate=%s", self._last_vehicle_status_timestamp)
+
+        _LOGGER.debug("Toyota NA _parse_vehicle_status: %d categories", len(vehicle_status["vehicleStatus"]))
 
         for category in vehicle_status["vehicleStatus"]:
             if not category or "sections" not in category:
@@ -345,7 +362,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                 key = f"{category_type} {section_type}"
                 values = section.get("values", [])
 
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Toyota NA vehicle_status section key=%s values=%s mapped=%s",
                     key, values, self._vehicle_status_category_map.get(key),
                 )
@@ -356,7 +373,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                         continue
                     first_val = values[0].get("value", "").lower()
                     if first_val not in ("closed", "open", "opened", "locked", "unlocked"):
-                        _LOGGER.warning("Toyota NA vehicle_status: skipping key=%s, unexpected first_val=%s", key, first_val)
+                        _LOGGER.debug("Toyota NA vehicle_status: skipping key=%s, unexpected first_val=%s", key, first_val)
                         continue
 
                     if first_val in ("locked", "unlocked"):
@@ -375,7 +392,7 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                             closed=is_closed,
                             locked=is_locked,
                         )
-                        _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, is_closed, is_locked)
+                        _LOGGER.debug("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, is_closed, is_locked)
                     elif len(values) >= 2:
                         # Standard layout: values[0]=open/closed, values[1]=locked/unlocked
                         second_val = values[1].get("value", "").lower()
@@ -386,18 +403,18 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
                                 closed=self._isClosed(section),
                                 locked=self._isLocked(section),
                             )
-                            _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, self._isClosed(section), self._isLocked(section))
+                            _LOGGER.debug("Toyota NA vehicle_status: key=%s → ToyotaLockableOpening(closed=%s, locked=%s)", key, self._isClosed(section), self._isLocked(section))
                         else:
                             self._features[
                                 self._vehicle_status_category_map[key]
                             ] = ToyotaOpening(self._isClosed(section))
-                            _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s) [2 vals, no lock]", key, self._isClosed(section))
+                            _LOGGER.debug("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s) [2 vals, no lock]", key, self._isClosed(section))
                     else:
                         # Single value, open/closed only
                         self._features[
                             self._vehicle_status_category_map[key]
                         ] = ToyotaOpening(self._isClosed(section))
-                        _LOGGER.warning("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s)", key, self._isClosed(section))
+                        _LOGGER.debug("Toyota NA vehicle_status: key=%s → ToyotaOpening(closed=%s)", key, self._isClosed(section))
 
     #
     # GraphQL vehicle status parser
@@ -534,18 +551,33 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
         else:
             _LOGGER.debug("Toyota NA _parse_telemetry called with %d keys: %s", len(telemetry), list(telemetry.keys()))
 
+        telemetry_timestamp = self._parse_timestamp(telemetry.get("lastTimestamp"))
+        telemetry_is_newer = (
+            self._last_vehicle_status_timestamp is None
+            or (
+                telemetry_timestamp is not None
+                and telemetry_timestamp > self._last_vehicle_status_timestamp
+            )
+        )
+
         for key, value in telemetry.items():
             if value is None:
                 continue
 
             # last time stamp is a primitive
             if key == "lastTimestamp":
-                self._features[VehicleFeatures.LastTimeStamp] = ToyotaNumeric(datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp(), "")
+                parsed = self._parse_timestamp(value)
+                if parsed is None:
+                    continue
+                self._features[VehicleFeatures.LastTimeStamp] = ToyotaNumeric(parsed, "")
                 continue
 
             # tire pressure time stamp is a primitive
             if key == "tirePressureTimestamp":
-                self._features[VehicleFeatures.LastTirePressureTimeStamp] = ToyotaNumeric(datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc).timestamp(), "")
+                parsed = self._parse_timestamp(value)
+                if parsed is None:
+                    continue
+                self._features[VehicleFeatures.LastTirePressureTimeStamp] = ToyotaNumeric(parsed, "")
                 continue
 
             # fuel level is a primitive
@@ -562,6 +594,8 @@ class SeventeenCYPlusToyotaVehicle(ToyotaVehicle):
 
             if "Window" in key or "Roof" in key:
                 if value not in (1, 2):
+                    continue
+                if not telemetry_is_newer:
                     continue
                 self._features[
                     self._vehicle_telemetry_map.get(key, key)

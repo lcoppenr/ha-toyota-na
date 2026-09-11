@@ -243,8 +243,10 @@ async def update_vehicles_status(hass: HomeAssistant, client: ToyotaOneClient, e
         vehicles: list[ToyotaVehicle] = []
         for vehicle in raw_vehicles:
             if vehicle.subscribed is not True:
-                _LOGGER.warning(
-                    f"Your {vehicle.model_year} {vehicle.model_name} needs a remote services subscription to fully work with Home Assistant."
+                _LOGGER.debug(
+                    "Your %s %s needs a remote services subscription to fully work with Home Assistant.",
+                    vehicle.model_year,
+                    vehicle.model_name,
                 )
             if need_refresh and vehicle.subscribed:
                 try:
