@@ -1,5 +1,7 @@
 # ha-toyota-na
 
+> **Retired 2026-11-25.** This LFC fork of [widewing/ha-toyota-na](https://github.com/widewing/ha-toyota-na) is no longer maintained; use [orienw/ha-toyota-na](https://github.com/orienw/ha-toyota-na) instead.
+
 ## Introduction
 This is a Home Assistant integration for Toyota North America.
 
